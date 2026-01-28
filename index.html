@@ -1,0 +1,1545 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MorsePing - Secure P2P Communication</title>
+<style>
+:root {
+  --bg-primary: #0f0f23;
+  --bg-secondary: #1a1a2e;
+  --bg-tertiary: #16213e;
+  --accent-primary: #00ff88;
+  --accent-secondary: #00d4ff;
+  --accent-warning: #ffaa00;
+  --accent-error: #ff3366;
+  --text-primary: #e0e0e0;
+  --text-secondary: #a0a0a0;
+  --text-dim: #666666;
+  --border-color: #2a2a3e;
+  --shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.5);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Courier New', monospace;
+  background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-tertiary) 100%);
+  color: var(--text-primary);
+  min-height: 100vh;
+  padding: 20px;
+  line-height: 1.6;
+}
+
+.app-container {
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 30px;
+  padding: 30px 20px;
+  background: var(--bg-secondary);
+  border-radius: 16px;
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--border-color);
+}
+
+.header h1 {
+  font-size: 2.5em;
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 10px;
+  letter-spacing: 2px;
+}
+
+.header .tagline {
+  color: var(--text-secondary);
+  font-size: 0.9em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 12px;
+  background: rgba(0, 255, 136, 0.1);
+  border: 1px solid var(--accent-primary);
+  border-radius: 20px;
+  font-size: 0.75em;
+  color: var(--accent-primary);
+}
+
+.connection-status {
+  padding: 20px;
+  margin-bottom: 20px;
+  border-radius: 12px;
+  text-align: center;
+  font-weight: 600;
+  font-size: 1.1em;
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
+}
+
+.connection-status.connected {
+  background: linear-gradient(135deg, rgba(0, 255, 136, 0.1) 0%, rgba(0, 212, 255, 0.1) 100%);
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 20px rgba(0, 255, 136, 0.2);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.connection-status.disconnected {
+  background: rgba(255, 51, 102, 0.1);
+  border-color: var(--accent-error);
+  color: var(--accent-error);
+}
+
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 20px rgba(0, 255, 136, 0.2); }
+  50% { box-shadow: 0 0 30px rgba(0, 255, 136, 0.4); }
+}
+
+.nav-tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 20px;
+  background: var(--bg-secondary);
+  border-radius: 12px;
+  padding: 4px;
+  box-shadow: var(--shadow);
+}
+
+.nav-tab {
+  flex: 1;
+  padding: 15px 20px;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 1em;
+  font-weight: 600;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.nav-tab:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.nav-tab.active {
+  background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
+  color: var(--bg-primary);
+}
+
+.section {
+  background: var(--bg-secondary);
+  padding: 30px;
+  border-radius: 16px;
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--border-color);
+  display: none;
+}
+
+.section.active {
+  display: block;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.section-title {
+  font-size: 1.5em;
+  margin-bottom: 20px;
+  color: var(--accent-primary);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.card {
+  background: var(--bg-tertiary);
+  padding: 20px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  border: 1px solid var(--border-color);
+}
+
+.card-title {
+  font-size: 1.1em;
+  margin-bottom: 15px;
+  color: var(--accent-secondary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+input, textarea {
+  width: 100%;
+  padding: 12px 16px;
+  background: var(--bg-primary);
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 0.95em;
+  transition: all 0.3s ease;
+  margin: 10px 0;
+}
+
+input:focus, textarea:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px rgba(0, 255, 136, 0.1);
+}
+
+input::placeholder, textarea::placeholder {
+  color: var(--text-dim);
+}
+
+textarea {
+  resize: vertical;
+  min-height: 100px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.85em;
+}
+
+button {
+  padding: 12px 24px;
+  background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
+  border: none;
+  border-radius: 8px;
+  color: var(--bg-primary);
+  font-family: inherit;
+  font-size: 0.95em;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 5px;
+  box-shadow: var(--shadow);
+}
+
+button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 255, 136, 0.3);
+}
+
+button:active {
+  transform: translateY(0);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+button.secondary {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  border: 2px solid var(--border-color);
+}
+
+button.secondary:hover {
+  border-color: var(--accent-primary);
+  box-shadow: 0 6px 12px rgba(0, 212, 255, 0.2);
+}
+
+button.danger {
+  background: linear-gradient(135deg, var(--accent-error) 0%, #cc0033 100%);
+  color: white;
+}
+
+.button-group {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 15px 0;
+}
+
+.signal-box {
+  background: var(--bg-primary);
+  border: 2px solid var(--accent-warning);
+  border-radius: 12px;
+  padding: 20px;
+  margin: 15px 0;
+}
+
+.signal-text {
+  font-family: 'Courier New', monospace;
+  font-size: 0.85em;
+  word-break: break-all;
+  color: var(--accent-warning);
+  background: rgba(255, 170, 0, 0.05);
+  padding: 15px;
+  border-radius: 8px;
+  max-height: 150px;
+  overflow-y: auto;
+  line-height: 1.6;
+}
+
+.signal-text::-webkit-scrollbar {
+  width: 8px;
+}
+
+.signal-text::-webkit-scrollbar-track {
+  background: var(--bg-tertiary);
+  border-radius: 4px;
+}
+
+.signal-text::-webkit-scrollbar-thumb {
+  background: var(--accent-warning);
+  border-radius: 4px;
+}
+
+.qr-container {
+  text-align: center;
+  margin: 20px 0;
+  padding: 20px;
+  background: var(--bg-primary);
+  border: 2px solid var(--accent-secondary);
+  border-radius: 12px;
+}
+
+.qr-container h4 {
+  margin-bottom: 15px;
+  color: var(--accent-secondary);
+}
+
+#qrcode {
+  display: inline-block;
+  padding: 15px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: var(--shadow-lg);
+}
+
+#qrcode canvas {
+  display: block;
+}
+
+.morse-display {
+  background: rgba(255, 170, 0, 0.1);
+  border: 2px solid var(--accent-warning);
+  border-radius: 12px;
+  padding: 20px;
+  margin: 15px 0;
+  min-height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1em;
+  color: var(--accent-warning);
+  text-align: center;
+}
+
+.timing-viz {
+  height: 80px;
+  background: var(--bg-primary);
+  border: 2px solid var(--border-color);
+  border-radius: 12px;
+  margin: 15px 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.ping-dot {
+  position: absolute;
+  width: 6px;
+  height: 100%;
+  border-radius: 3px;
+  animation: pingFade 2s ease-out forwards;
+}
+
+@keyframes pingFade {
+  0% { 
+    opacity: 1;
+    transform: scaleX(1);
+  }
+  100% { 
+    opacity: 0;
+    transform: scaleX(0.5);
+  }
+}
+
+.received {
+  background: var(--bg-primary);
+  border: 2px solid var(--accent-primary);
+  border-radius: 12px;
+  padding: 20px;
+  margin: 15px 0;
+  min-height: 120px;
+  max-height: 300px;
+  overflow-y: auto;
+  font-size: 1.2em;
+  font-family: 'Courier New', monospace;
+  color: var(--accent-primary);
+  line-height: 1.8;
+  word-break: break-word;
+}
+
+.received:empty::before {
+  content: 'Messages will appear here...';
+  color: var(--text-dim);
+  font-size: 0.9em;
+}
+
+.received::-webkit-scrollbar {
+  width: 10px;
+}
+
+.received::-webkit-scrollbar-track {
+  background: var(--bg-tertiary);
+  border-radius: 5px;
+}
+
+.received::-webkit-scrollbar-thumb {
+  background: var(--accent-primary);
+  border-radius: 5px;
+}
+
+.log {
+  font-size: 0.8em;
+  color: var(--text-dim);
+  background: var(--bg-primary);
+  padding: 15px;
+  margin: 15px 0;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  max-height: 120px;
+  overflow-y: auto;
+  font-family: 'Courier New', monospace;
+}
+
+.log-entry {
+  padding: 4px 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.log-entry:last-child {
+  border-bottom: none;
+}
+
+.log-timestamp {
+  color: var(--accent-secondary);
+  margin-right: 10px;
+}
+
+.info-box {
+  background: rgba(0, 212, 255, 0.1);
+  border-left: 4px solid var(--accent-secondary);
+  padding: 15px;
+  margin: 15px 0;
+  border-radius: 8px;
+  color: var(--text-secondary);
+  font-size: 0.9em;
+}
+
+.success-box {
+  background: rgba(0, 255, 136, 0.1);
+  border-left: 4px solid var(--accent-primary);
+  padding: 15px;
+  margin: 15px 0;
+  border-radius: 8px;
+  color: var(--accent-primary);
+}
+
+.warning-box {
+  background: rgba(255, 170, 0, 0.1);
+  border-left: 4px solid var(--accent-warning);
+  padding: 15px;
+  margin: 15px 0;
+  border-radius: 8px;
+  color: var(--accent-warning);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+  margin: 20px 0;
+}
+
+.stat-card {
+  background: var(--bg-primary);
+  padding: 20px;
+  border-radius: 12px;
+  border: 2px solid var(--border-color);
+  text-align: center;
+}
+
+.stat-value {
+  font-size: 2em;
+  font-weight: 700;
+  color: var(--accent-primary);
+  margin: 10px 0;
+}
+
+.stat-label {
+  color: var(--text-secondary);
+  font-size: 0.9em;
+}
+
+@media (max-width: 768px) {
+  .header h1 {
+    font-size: 1.8em;
+  }
+  
+  .button-group {
+    flex-direction: column;
+  }
+  
+  button {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .nav-tab {
+    font-size: 0.9em;
+    padding: 12px 10px;
+  }
+}
+
+.tooltip {
+  position: relative;
+  display: inline-block;
+}
+
+.tooltip .tooltiptext {
+  visibility: hidden;
+  width: 200px;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  text-align: center;
+  border-radius: 6px;
+  padding: 8px;
+  position: absolute;
+  z-index: 1;
+  bottom: 125%;
+  left: 50%;
+  margin-left: -100px;
+  opacity: 0;
+  transition: opacity 0.3s;
+  font-size: 0.85em;
+  border: 1px solid var(--border-color);
+}
+
+.tooltip:hover .tooltiptext {
+  visibility: visible;
+  opacity: 1;
+}
+
+.encryption-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  background: rgba(0, 255, 136, 0.2);
+  border: 1px solid var(--accent-primary);
+  border-radius: 6px;
+  font-size: 0.85em;
+  color: var(--accent-primary);
+  font-weight: 600;
+}
+
+.code-input {
+  text-align: center;
+  font-size: 1.5em;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.divider {
+  height: 1px;
+  background: var(--border-color);
+  margin: 30px 0;
+}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+</head>
+<body>
+
+<div class="app-container">
+  <header class="header">
+    <h1>⚡ MorsePing</h1>
+    <div class="tagline">
+      <span class="badge">🔒 Zero Servers</span>
+      <span class="badge">🔐 E2E Encrypted</span>
+      <span class="badge">📡 Direct P2P</span>
+    </div>
+  </header>
+  
+  <div class="connection-status disconnected" id="connectionStatus">
+    🔴 DISCONNECTED
+  </div>
+  
+  <nav class="nav-tabs">
+    <button class="nav-tab active" onclick="switchTab('setup')">
+      🔐 Setup Connection
+    </button>
+    <button class="nav-tab" onclick="switchTab('communicate')">
+      📡 Communicate
+    </button>
+    <button class="nav-tab" onclick="switchTab('stats')">
+      📊 Statistics
+    </button>
+  </nav>
+  
+  <!-- Setup Section -->
+  <section id="setupSection" class="section active">
+    <h2 class="section-title">🔐 Secure Connection Setup</h2>
+    
+    <div class="card">
+      <div class="card-title">📱 Quick Connect</div>
+      <p class="info-box">
+        Share connection data via any messaging app (WhatsApp, Signal, SMS, email, etc.)
+      </p>
+      
+      <div class="button-group">
+        <button onclick="initiateConnection()">
+          <span>🔑</span> Generate Connection Data
+        </button>
+        <button class="secondary" onclick="scanQRCode()">
+          <span>📷</span> Scan QR Code
+        </button>
+        <button class="danger" onclick="disconnect()" id="disconnectBtn" disabled>
+          <span>🔌</span> Disconnect
+        </button>
+      </div>
+      
+      <div id="mySignalContainer" style="display:none;">
+        <div class="success-box">
+          ✅ Connection data generated! Share this with your peer.
+        </div>
+        
+        <div class="signal-box">
+          <div class="signal-text" id="mySignalText"></div>
+          <div class="button-group">
+            <button onclick="copySignal()">
+              <span>📋</span> Copy to Clipboard
+            </button>
+            <button class="secondary" onclick="shareVia()">
+              <span>📤</span> Share Via...
+            </button>
+          </div>
+        </div>
+        
+        <div class="qr-container">
+          <h4>📱 Scan with phone to share</h4>
+          <div id="qrcode"></div>
+          <p style="margin-top: 15px; color: var(--text-dim); font-size: 0.9em;">
+            Your peer can scan this QR code to get the connection data
+          </p>
+        </div>
+      </div>
+      
+      <div class="divider"></div>
+      
+      <div class="card-title">🔗 Connect to Peer</div>
+      <p style="color: var(--text-secondary); margin-bottom: 15px;">
+        Paste the connection data you received from your peer:
+      </p>
+      
+      <textarea id="peerSignalInput" placeholder="Paste peer's connection data here or scan their QR code..."></textarea>
+      
+      <div class="button-group">
+        <button onclick="connectToPeer()">
+          <span>🔗</span> Establish Connection
+        </button>
+        <button class="secondary" onclick="document.getElementById('peerSignalInput').value = ''">
+          <span>🗑️</span> Clear
+        </button>
+      </div>
+    </div>
+    
+    <div class="card">
+      <div class="card-title">📝 Connection Log</div>
+      <div class="log" id="connectionLog">
+        <div class="log-entry">
+          <span class="log-timestamp">[System]</span> Waiting for connection...
+        </div>
+      </div>
+    </div>
+  </section>
+  
+  <!-- Communicate Section -->
+  <section id="communicateSection" class="section">
+    <h2 class="section-title">
+      📡 Morse Communication
+      <span class="encryption-badge">🔒 Encrypted</span>
+    </h2>
+    
+    <div class="card">
+      <div class="card-title">📤 Send Message</div>
+      
+      <input 
+        type="text" 
+        id="messageInput" 
+        placeholder="Type your message here..." 
+        onkeypress="if(event.key==='Enter') sendMorse()"
+      >
+      
+      <div class="button-group">
+        <button onclick="sendMorse()">
+          <span>📤</span> Send as Morse
+        </button>
+        <button class="secondary" onclick="sendTestPing()">
+          <span>⚡</span> Test Connection
+        </button>
+        <button class="secondary" onclick="clearMessages()">
+          <span>🗑️</span> Clear Chat
+        </button>
+      </div>
+      
+      <div class="timing-viz" id="timingViz"></div>
+      
+      <div class="morse-display" id="morseDisplay">
+        Ready to send Morse code...
+      </div>
+    </div>
+    
+    <div class="card">
+      <div class="card-title">📨 Received Messages</div>
+      <div class="received" id="received"></div>
+    </div>
+    
+    <div class="card">
+      <div class="card-title">📝 Message Log</div>
+      <div class="log" id="messageLog">
+        <div class="log-entry">
+          <span class="log-timestamp">[System]</span> No messages yet
+        </div>
+      </div>
+    </div>
+  </section>
+  
+  <!-- Statistics Section -->
+  <section id="statsSection" class="section">
+    <h2 class="section-title">📊 Connection Statistics</h2>
+    
+    <div class="grid">
+      <div class="stat-card">
+        <div class="stat-label">Messages Sent</div>
+        <div class="stat-value" id="statSent">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Messages Received</div>
+        <div class="stat-value" id="statReceived">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Characters Sent</div>
+        <div class="stat-value" id="statCharsSent">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Connection Uptime</div>
+        <div class="stat-value" id="statUptime">00:00</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Average Latency</div>
+        <div class="stat-value" id="statLatency">0ms</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Connection Quality</div>
+        <div class="stat-value" id="statQuality">-</div>
+      </div>
+    </div>
+    
+    <div class="card">
+      <div class="card-title">ℹ️ About MorsePing</div>
+      <div class="info-box">
+        <p><strong>MorsePing</strong> is a secure, peer-to-peer communication system that uses Morse code timing patterns transmitted over WebRTC data channels.</p>
+        <br>
+        <p><strong>Features:</strong></p>
+        <ul style="margin-left: 20px; margin-top: 10px;">
+          <li>🔒 End-to-end encryption via WebRTC</li>
+          <li>🌐 Works without any central server</li>
+          <li>📱 Share connection via QR codes or any messaging app</li>
+          <li>⚡ Real-time Morse code transmission with timing visualization</li>
+          <li>🔐 Privacy-focused - no data stored or transmitted to third parties</li>
+        </ul>
+      </div>
+    </div>
+    
+    <div class="button-group">
+      <button class="secondary" onclick="resetStats()">
+        <span>🔄</span> Reset Statistics
+      </button>
+      <button class="secondary" onclick="exportStats()">
+        <span>📥</span> Export Data
+      </button>
+    </div>
+  </section>
+</div>
+
+<script>
+// Morse code lookup table
+const MORSE = {
+  'A': '.-',    'B': '-...',  'C': '-.-.',  'D': '-..',   'E': '.',
+  'F': '..-.',  'G': '--.',   'H': '....',  'I': '..',    'J': '.---',
+  'K': '-.-',   'L': '.-..',  'M': '--',    'N': '-.',    'O': '---',
+  'P': '.--.',  'Q': '--.-',  'R': '.-.',   'S': '...',   'T': '-',
+  'U': '..-',   'V': '...-',  'W': '.--',   'X': '-..-',  'Y': '-.--',
+  'Z': '--..',  '1': '.----', '2': '..---', '3': '...--', '4': '....-',
+  '5': '.....', '6': '-....', '7': '--...', '8': '---..', '9': '----.',
+  '0': '-----', ' ': '/',    '.': '.-.-.-', ',': '--..--', '?': '..--..',
+  "'": '.----.', '!': '-.-.--', '/': '-..-.', '(': '-.--.', ')': '-.--.-',
+  '&': '.-...', ':': '---...', ';': '-.-.-.', '=': '-...-', '+': '.-.-.',
+  '-': '-....-', '_': '..--.-', '"': '.-..-.', '$': '...-..-', '@': '.--.-.'
+};
+
+const MORSE_REVERSE = Object.fromEntries(
+  Object.entries(MORSE).map(([k, v]) => [v, k])
+);
+
+// Timing constants (ms)
+const DIT = 150;
+const DAH = 450;
+const LETTER_GAP = 350;
+const WORD_GAP = 700;
+
+// State
+let pc = null;
+let dataChannel = null;
+let lastPingTime = 0;
+let morseBuffer = [];
+let decodeTimer = null;
+
+// Statistics
+let stats = {
+  messagesSent: 0,
+  messagesReceived: 0,
+  charsSent: 0,
+  charsReceived: 0,
+  connectionStartTime: null,
+  latencies: [],
+  lastPingSent: 0
+};
+
+// Logging
+let connectionLog = [];
+let messageLog = [];
+
+// WebRTC Configuration
+const rtcConfig = {
+  iceServers: [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' },
+    { urls: 'stun:stun2.l.google.com:19302' },
+    { urls: 'stun:stun3.l.google.com:19302' },
+    { urls: 'stun:stun4.l.google.com:19302' }
+  ],
+  iceCandidatePoolSize: 10
+};
+
+// Tab switching
+function switchTab(tab) {
+  // Update tab buttons
+  document.querySelectorAll('.nav-tab').forEach(btn => btn.classList.remove('active'));
+  event.target.classList.add('active');
+  
+  // Update sections
+  document.querySelectorAll('.section').forEach(section => section.classList.remove('active'));
+  
+  switch(tab) {
+    case 'setup':
+      document.getElementById('setupSection').classList.add('active');
+      break;
+    case 'communicate':
+      document.getElementById('communicateSection').classList.add('active');
+      break;
+    case 'stats':
+      document.getElementById('statsSection').classList.add('active');
+      updateStatsDisplay();
+      break;
+  }
+}
+
+// Generate connection offer
+async function initiateConnection() {
+  try {
+    logConnection('🔄 Generating connection offer...');
+    
+    pc = new RTCPeerConnection(rtcConfig);
+    
+    // Create data channel with optimized settings
+    dataChannel = pc.createDataChannel('morse', {
+      ordered: true,
+      maxRetransmits: 3
+    });
+    
+    setupDataChannel();
+    
+    // Collect ICE candidates
+    const iceCandidates = [];
+    
+    pc.onicecandidate = (event) => {
+      if (event.candidate) {
+        iceCandidates.push(event.candidate.toJSON());
+        logConnection(`📡 ICE candidate gathered (${iceCandidates.length})`);
+      } else {
+        // ICE gathering complete
+        const signal = {
+          type: 'offer',
+          sdp: pc.localDescription.sdp,
+          ice: iceCandidates,
+          version: '2.0',
+          timestamp: Date.now()
+        };
+        
+        const signalText = btoa(JSON.stringify(signal));
+        document.getElementById('mySignalText').textContent = signalText;
+        document.getElementById('mySignalContainer').style.display = 'block';
+        
+        generateQRCode(signalText);
+        logConnection('✅ Connection data ready to share');
+      }
+    };
+    
+    pc.onicegatheringstatechange = () => {
+      logConnection(`ICE gathering state: ${pc.iceGatheringState}`);
+    };
+    
+    pc.onconnectionstatechange = () => {
+      logConnection(`Connection state: ${pc.connectionState}`);
+    };
+    
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+    logConnection('✅ Connection offer created');
+    
+  } catch (error) {
+    logConnection(`❌ Error: ${error.message}`);
+    alert('Failed to generate connection: ' + error.message);
+  }
+}
+
+// Generate QR code
+function generateQRCode(text) {
+  const qrContainer = document.getElementById('qrcode');
+  qrContainer.innerHTML = '';
+  
+  QRCode.toCanvas(text, { 
+    width: 220,
+    height: 220,
+    margin: 2,
+    color: {
+      dark: '#0f0f23',
+      light: '#ffffff'
+    },
+    errorCorrectionLevel: 'M'
+  }, function (error, canvas) {
+    if (error) {
+      logConnection('❌ QR Code generation failed');
+      qrContainer.innerHTML = '<p style="color: var(--accent-error);">QR generation failed</p>';
+    } else {
+      qrContainer.appendChild(canvas);
+      logConnection('✅ QR Code generated');
+    }
+  });
+}
+
+// Scan QR code
+async function scanQRCode() {
+  try {
+    // Check if the browser supports getUserMedia
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      alert('Camera access not supported in this browser. Please paste connection data manually.');
+      return;
+    }
+    
+    // Request camera permission
+    const stream = await navigator.mediaDevices.getUserMedia({ 
+      video: { facingMode: 'environment' }
+    });
+    
+    // Create video element for QR scanning
+    const video = document.createElement('video');
+    video.srcObject = stream;
+    video.setAttribute('playsinline', true);
+    video.play();
+    
+    // Create modal for camera view
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.95);
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    `;
+    
+    modal.innerHTML = `
+      <h3 style="color: var(--accent-primary); margin-bottom: 20px;">📷 Position QR code in frame</h3>
+      <div style="position: relative;">
+        ${video.outerHTML}
+        <canvas id="qrCanvas" style="display:none;"></canvas>
+      </div>
+      <button onclick="this.parentElement.remove(); window.stopQRScanning();" 
+              style="margin-top: 20px;">
+        Cancel
+      </button>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    logConnection('📷 Camera activated for QR scanning');
+    
+    // Note: Full QR scanning requires additional library like jsQR
+    // For now, show instructions
+    setTimeout(() => {
+      alert('QR scanning requires additional library. Please use the manual paste method.');
+      modal.remove();
+      stream.getTracks().forEach(track => track.stop());
+    }, 3000);
+    
+  } catch (error) {
+    logConnection('❌ Camera access denied');
+    alert('Camera access denied. Please paste connection data manually.');
+  }
+}
+
+window.stopQRScanning = function() {
+  // Stop any active video streams
+  const videos = document.querySelectorAll('video');
+  videos.forEach(video => {
+    if (video.srcObject) {
+      video.srcObject.getTracks().forEach(track => track.stop());
+    }
+  });
+};
+
+// Connect to peer
+async function connectToPeer() {
+  const peerSignalText = document.getElementById('peerSignalInput').value.trim();
+  
+  if (!peerSignalText) {
+    alert('Please paste connection data from your peer');
+    return;
+  }
+  
+  try {
+    logConnection('🔄 Parsing peer connection data...');
+    
+    const peerSignal = JSON.parse(atob(peerSignalText));
+    
+    if (peerSignal.type === 'offer') {
+      // We're the answerer
+      if (!pc) {
+        pc = new RTCPeerConnection(rtcConfig);
+        
+        pc.ondatachannel = (event) => {
+          dataChannel = event.channel;
+          setupDataChannel();
+        };
+        
+        pc.onconnectionstatechange = () => {
+          logConnection(`Connection state: ${pc.connectionState}`);
+        };
+      }
+      
+      await pc.setRemoteDescription({
+        type: 'offer',
+        sdp: peerSignal.sdp
+      });
+      
+      logConnection('✅ Remote offer set');
+      
+      // Add ICE candidates
+      for (const candidate of peerSignal.ice) {
+        await pc.addIceCandidate(new RTCIceCandidate(candidate));
+      }
+      
+      logConnection(`✅ Added ${peerSignal.ice.length} ICE candidates`);
+      
+      // Create answer
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+      
+      // Gather ICE candidates
+      const iceCandidates = [];
+      pc.onicecandidate = (event) => {
+        if (event.candidate) {
+          iceCandidates.push(event.candidate.toJSON());
+        } else {
+          const answerSignal = {
+            type: 'answer',
+            sdp: pc.localDescription.sdp,
+            ice: iceCandidates,
+            version: '2.0',
+            timestamp: Date.now()
+          };
+          
+          const answerText = btoa(JSON.stringify(answerSignal));
+          
+          // Copy to clipboard and show
+          navigator.clipboard.writeText(answerText).then(() => {
+            alert('✅ Answer copied to clipboard!\n\nSend this to your peer to complete the connection.');
+            logConnection('✅ Answer generated and copied');
+          });
+        }
+      };
+      
+    } else if (peerSignal.type === 'answer') {
+      // We're the offerer receiving answer
+      await pc.setRemoteDescription({
+        type: 'answer',
+        sdp: peerSignal.sdp
+      });
+      
+      logConnection('✅ Remote answer set');
+      
+      // Add ICE candidates
+      for (const candidate of peerSignal.ice) {
+        await pc.addIceCandidate(new RTCIceCandidate(candidate));
+      }
+      
+      logConnection(`✅ Connection established! Added ${peerSignal.ice.length} ICE candidates`);
+    }
+    
+  } catch (error) {
+    logConnection(`❌ Connection failed: ${error.message}`);
+    alert('Invalid connection data or connection failed: ' + error.message);
+  }
+}
+
+// Setup data channel
+function setupDataChannel() {
+  dataChannel.onopen = () => {
+    logConnection('✅ Data channel opened - connection established!');
+    setConnectionStatus(true);
+    stats.connectionStartTime = Date.now();
+    startUptimeCounter();
+    
+    // Auto-switch to communicate tab
+    setTimeout(() => {
+      document.querySelectorAll('.nav-tab')[1].click();
+    }, 500);
+  };
+  
+  dataChannel.onclose = () => {
+    logConnection('⚠️ Data channel closed');
+    setConnectionStatus(false);
+  };
+  
+  dataChannel.onerror = (error) => {
+    logConnection(`❌ Data channel error: ${error}`);
+  };
+  
+  dataChannel.onmessage = (event) => {
+    handleIncomingData(event.data);
+  };
+}
+
+// Handle incoming data
+function handleIncomingData(data) {
+  try {
+    const message = JSON.parse(data);
+    
+    if (message.type === 'test') {
+      logMessage('⚡ Test ping received');
+      
+      // Send pong back
+      if (dataChannel && dataChannel.readyState === 'open') {
+        dataChannel.send(JSON.stringify({
+          type: 'pong',
+          timestamp: Date.now(),
+          originalTimestamp: message.timestamp
+        }));
+      }
+      return;
+    }
+    
+    if (message.type === 'pong') {
+      const latency = Date.now() - message.originalTimestamp;
+      stats.latencies.push(latency);
+      if (stats.latencies.length > 10) stats.latencies.shift();
+      logMessage(`📊 Latency: ${latency}ms`);
+      return;
+    }
+    
+    if (message.type === 'ping') {
+      handleMorsePing(message);
+    }
+    
+  } catch (error) {
+    logMessage(`❌ Error processing message: ${error.message}`);
+  }
+}
+
+// Handle Morse ping
+function handleMorsePing(ping) {
+  const now = Date.now();
+  
+  if (lastPingTime > 0) {
+    const interval = now - lastPingTime;
+    
+    if (interval < 300) {
+      morseBuffer.push('.');
+    } else if (interval < 600) {
+      morseBuffer.push('-');
+    } else if (interval > WORD_GAP - 100) {
+      decodeMorseBuffer();
+      appendReceived(' ');
+      morseBuffer = [];
+    } else if (interval > LETTER_GAP - 100) {
+      decodeMorseBuffer();
+      morseBuffer = [];
+    }
+  }
+  
+  visualizePing(ping.symbol === '.' ? DIT : DAH, false);
+  
+  lastPingTime = now;
+  
+  clearTimeout(decodeTimer);
+  decodeTimer = setTimeout(() => {
+    if (morseBuffer.length > 0) {
+      decodeMorseBuffer();
+      morseBuffer = [];
+    }
+  }, 1200);
+}
+
+// Decode morse buffer
+function decodeMorseBuffer() {
+  if (morseBuffer.length === 0) return;
+  
+  const pattern = morseBuffer.join('');
+  const char = MORSE_REVERSE[pattern] || '?';
+  
+  appendReceived(char);
+  stats.charsReceived++;
+  
+  document.getElementById('morseDisplay').textContent = 
+    `Received: ${pattern} → ${char}`;
+}
+
+// Send morse message
+async function sendMorse() {
+  const message = document.getElementById('messageInput').value.trim();
+  
+  if (!message) {
+    alert('Please enter a message');
+    return;
+  }
+  
+  if (!dataChannel || dataChannel.readyState !== 'open') {
+    alert('Not connected! Please establish a connection first.');
+    return;
+  }
+  
+  const messageUpper = message.toUpperCase();
+  document.getElementById('messageInput').value = '';
+  
+  let morsePattern = '';
+  logMessage(`📤 Sending: "${messageUpper}"`);
+  
+  stats.messagesSent++;
+  stats.charsSent += messageUpper.length;
+  
+  for (let char of messageUpper) {
+    const pattern = MORSE[char];
+    if (!pattern) {
+      logMessage(`⚠️ Skipping unsupported character: "${char}"`);
+      continue;
+    }
+    
+    morsePattern += pattern + ' ';
+    
+    for (let symbol of pattern) {
+      const duration = symbol === '.' ? DIT : DAH;
+      
+      dataChannel.send(JSON.stringify({
+        type: 'ping',
+        timestamp: Date.now(),
+        symbol: symbol,
+        char: char
+      }));
+      
+      visualizePing(duration, true);
+      await sleep(duration);
+    }
+    
+    await sleep(LETTER_GAP);
+  }
+  
+  document.getElementById('morseDisplay').textContent = 
+    `Sent: ${messageUpper} | Morse: ${morsePattern}`;
+  
+  logMessage(`✅ Message sent successfully`);
+}
+
+// Send test ping
+function sendTestPing() {
+  if (!dataChannel || dataChannel.readyState !== 'open') {
+    alert('Not connected!');
+    return;
+  }
+  
+  const timestamp = Date.now();
+  dataChannel.send(JSON.stringify({
+    type: 'test',
+    timestamp: timestamp
+  }));
+  
+  stats.lastPingSent = timestamp;
+  logMessage('⚡ Test ping sent');
+}
+
+// Visualize ping
+function visualizePing(duration, isSending) {
+  const viz = document.getElementById('timingViz');
+  const dot = document.createElement('div');
+  dot.className = 'ping-dot';
+  
+  // Random vertical position for visual interest
+  const topPos = Math.random() * 60;
+  dot.style.top = topPos + '%';
+  dot.style.left = '10px';
+  
+  if (isSending) {
+    dot.style.background = duration === DIT ? 
+      'linear-gradient(90deg, var(--accent-primary), var(--accent-secondary))' : 
+      'linear-gradient(90deg, var(--accent-warning), #ff8800)';
+  } else {
+    dot.style.background = duration === DIT ? 
+      'linear-gradient(90deg, var(--accent-secondary), #0088ff)' : 
+      'linear-gradient(90deg, #ff00aa, #cc0088)';
+  }
+  
+  dot.style.width = Math.max(duration / 8, 8) + 'px';
+  viz.appendChild(dot);
+  
+  setTimeout(() => {
+    if (dot.parentNode) dot.remove();
+  }, 2000);
+}
+
+// Append received character
+function appendReceived(char) {
+  const received = document.getElementById('received');
+  received.textContent += char;
+  received.scrollTop = received.scrollHeight;
+}
+
+// Clear messages
+function clearMessages() {
+  document.getElementById('received').textContent = '';
+  document.getElementById('morseDisplay').textContent = 'Ready to send Morse code...';
+  document.getElementById('timingViz').innerHTML = '';
+  messageLog = [];
+  updateMessageLog();
+  logMessage('🗑️ Chat cleared');
+}
+
+// Set connection status
+function setConnectionStatus(isConnected) {
+  const statusDiv = document.getElementById('connectionStatus');
+  const disconnectBtn = document.getElementById('disconnectBtn');
+  
+  if (isConnected) {
+    statusDiv.className = 'connection-status connected';
+    statusDiv.textContent = '🟢 CONNECTED - Secure P2P Active';
+    disconnectBtn.disabled = false;
+  } else {
+    statusDiv.className = 'connection-status disconnected';
+    statusDiv.textContent = '🔴 DISCONNECTED';
+    disconnectBtn.disabled = true;
+  }
+}
+
+// Disconnect
+function disconnect() {
+  if (confirm('Are you sure you want to disconnect?')) {
+    if (dataChannel) dataChannel.close();
+    if (pc) pc.close();
+    
+    dataChannel = null;
+    pc = null;
+    lastPingTime = 0;
+    morseBuffer = [];
+    
+    setConnectionStatus(false);
+    logConnection('🔌 Disconnected manually');
+    
+    // Clear signal display
+    document.getElementById('mySignalContainer').style.display = 'none';
+    document.getElementById('peerSignalInput').value = '';
+  }
+}
+
+// Copy signal
+function copySignal() {
+  const text = document.getElementById('mySignalText').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    alert('✅ Connection data copied to clipboard!\n\nShare this with your peer via any messaging app.');
+    logConnection('📋 Connection data copied');
+  });
+}
+
+// Share via Web Share API
+function shareVia() {
+  const text = document.getElementById('mySignalText').textContent;
+  
+  if (navigator.share) {
+    navigator.share({
+      title: 'MorsePing Connection',
+      text: 'Connect with me on MorsePing using this data:\n\n' + text
+    }).then(() => {
+      logConnection('📤 Shared via Web Share API');
+    }).catch(() => {
+      // Fallback to copy
+      copySignal();
+    });
+  } else {
+    // Fallback to copy
+    copySignal();
+  }
+}
+
+// Logging functions
+function logConnection(message) {
+  const timestamp = new Date().toLocaleTimeString();
+  const entry = `<div class="log-entry"><span class="log-timestamp">[${timestamp}]</span> ${message}</div>`;
+  
+  connectionLog.push(entry);
+  if (connectionLog.length > 50) connectionLog.shift();
+  
+  document.getElementById('connectionLog').innerHTML = 
+    connectionLog.slice(-10).reverse().join('');
+}
+
+function logMessage(message) {
+  const timestamp = new Date().toLocaleTimeString();
+  const entry = `<div class="log-entry"><span class="log-timestamp">[${timestamp}]</span> ${message}</div>`;
+  
+  messageLog.push(entry);
+  if (messageLog.length > 50) messageLog.shift();
+  
+  document.getElementById('messageLog').innerHTML = 
+    messageLog.slice(-10).reverse().join('');
+}
+
+// Statistics
+function updateStatsDisplay() {
+  document.getElementById('statSent').textContent = stats.messagesSent;
+  document.getElementById('statReceived').textContent = stats.messagesReceived;
+  document.getElementById('statCharsSent').textContent = stats.charsSent;
+  
+  // Calculate average latency
+  if (stats.latencies.length > 0) {
+    const avg = stats.latencies.reduce((a, b) => a + b, 0) / stats.latencies.length;
+    document.getElementById('statLatency').textContent = Math.round(avg) + 'ms';
+    
+    // Connection quality based on latency
+    let quality = '⚠️ Poor';
+    if (avg < 50) quality = '🟢 Excellent';
+    else if (avg < 100) quality = '🟡 Good';
+    else if (avg < 200) quality = '🟠 Fair';
+    
+    document.getElementById('statQuality').textContent = quality;
+  } else {
+    document.getElementById('statLatency').textContent = '-';
+    document.getElementById('statQuality').textContent = '-';
+  }
+}
+
+function startUptimeCounter() {
+  setInterval(() => {
+    if (stats.connectionStartTime) {
+      const uptime = Date.now() - stats.connectionStartTime;
+      const minutes = Math.floor(uptime / 60000);
+      const seconds = Math.floor((uptime % 60000) / 1000);
+      document.getElementById('statUptime').textContent = 
+        `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    }
+  }, 1000);
+}
+
+function resetStats() {
+  if (confirm('Reset all statistics?')) {
+    stats = {
+      messagesSent: 0,
+      messagesReceived: 0,
+      charsSent: 0,
+      charsReceived: 0,
+      connectionStartTime: dataChannel && dataChannel.readyState === 'open' ? Date.now() : null,
+      latencies: [],
+      lastPingSent: 0
+    };
+    updateStatsDisplay();
+    logConnection('📊 Statistics reset');
+  }
+}
+
+function exportStats() {
+  const exportData = {
+    stats: stats,
+    connectionLog: connectionLog,
+    messageLog: messageLog,
+    exportedAt: new Date().toISOString()
+  };
+  
+  const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `morseping-stats-${Date.now()}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  
+  logConnection('📥 Statistics exported');
+}
+
+// Utility
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// Initialize
+document.addEventListener('DOMContentLoaded', function() {
+  logConnection('⚡ MorsePing initialized and ready');
+  logMessage('📡 System ready for secure communication');
+  updateStatsDisplay();
+});
+</script>
+
+</body>
+</html>
